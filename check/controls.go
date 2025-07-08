@@ -33,6 +33,7 @@ type Auditer interface {
 // Controls holds all controls to check for master nodes.
 type Controls struct {
 	ID          string   `yaml:"id" json:"id"`
+	Version     string   `json:"version,omitempty" yaml:"version,omitempty"`
 	Description string   `json:"text"`
 	Text        string   `json:"-"`
 	Groups      []*Group `json:"tests" yaml:"groups"`
@@ -51,8 +52,15 @@ type Summary struct {
 
 var defaultBench bench // for backward compatibility
 // NewControls instantiates a new master Controls object.
-func NewControls(in []byte, definitions []string) (*Controls, error) {
-	return defaultBench.NewControls(in, definitions)
+func NewControls(in []byte, definitions []string, version ...string) (*Controls, error) {
+	c, err := defaultBench.NewControls(in, definitions)
+	if err != nil {
+		return nil, err
+	}
+	if len(version) > 0 {
+		c.Version = version[0]
+	}
+	return c, nil
 }
 
 // RunGroup runs all checks in a group.

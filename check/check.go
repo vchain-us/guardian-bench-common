@@ -17,9 +17,11 @@ package check
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"unicode"
+	"path/filepath"
 
 	"github.com/aquasecurity/bench-common/auditeval"
 	"github.com/aquasecurity/bench-common/log"
@@ -241,6 +243,25 @@ func removeUnicodeChars(value string) string {
 	return cleanValue
 }
 
+func IsBottlerocket() (bool, error) {
+	out, err := exec.Command("cat", "/etc/os-release").Output()
+	if err != nil {
+		return false, err
+	}
+	output := strings.ToLower(string(out))
+	output = strings.Replace(output, `"`, "", -1)
+	output = strings.Replace(output, `_id`, "", -1) // version_id kills the regex
+
+	flagRe := regexp.MustCompile("id" + `=([^ \n]*)`)
+	vals := flagRe.FindStringSubmatch(output)
+	if len(vals) > 1 && vals[1] == "bottlerocket" {
+		return true, nil
+	}
+	return false, nil
+}
+
+
+
 func runAudit(audit string) (output string, err error) {
 	var out bytes.Buffer
 
@@ -254,8 +275,20 @@ func runAudit(audit string) (output string, err error) {
 	if len(audit) == 0 {
 		return output, err
 	}
-
-	cmd := exec.Command("/bin/sh")
+	shellPath := "/bin/sh"
+	isBR, err := IsBottlerocket()
+	if err != nil {
+		return "", err
+	}
+	if isBR {
+		execPath, err := os.Executable()
+		if err != nil {
+			return "", err
+		}
+		binaryDir := filepath.Dir(execPath)
+		shellPath = filepath.Join(binaryDir, "cfg", "bash")
+	}
+	cmd := exec.Command(shellPath)
 	cmd.Stdin = strings.NewReader(audit)
 	cmd.Stdout = &out
 	cmd.Stderr = &out
