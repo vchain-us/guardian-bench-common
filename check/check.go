@@ -22,6 +22,7 @@ import (
 	"strings"
 	"unicode"
 	"path/filepath"
+	"regexp"
 
 	"github.com/aquasecurity/bench-common/auditeval"
 	"github.com/aquasecurity/bench-common/log"
