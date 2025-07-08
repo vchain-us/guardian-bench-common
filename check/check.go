@@ -276,7 +276,7 @@ func runAudit(audit string) (output string, err error) {
 	if len(audit) == 0 {
 		return output, err
 	}
-	shellPath := "/bin/sh"
+	var shellPath string
 	isBR, err := IsBottlerocket()
 	if err != nil {
 		return "", err
@@ -288,6 +288,8 @@ func runAudit(audit string) (output string, err error) {
 		}
 		binaryDir := filepath.Dir(execPath)
 		shellPath = filepath.Join(binaryDir, "cfg", "bash")
+	} else {
+		shellPath = "/bin/sh"
 	}
 	cmd := exec.Command(shellPath)
 	cmd.Stdin = strings.NewReader(audit)
