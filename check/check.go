@@ -206,6 +206,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 
 	//If check type is manual, force result to WARN
 	if c.Type == MANUAL {
+		c.ActualValue = removeUnicodeChars(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
 		logger.Warn("", zap.String("Reason", c.Reason))
