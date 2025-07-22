@@ -200,16 +200,16 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 		}
 	}
 
-	if c.State != "" {
-		return
-	}
-
 	//If check type is manual, force result to WARN
 	if c.Type == MANUAL {
 		c.ActualValue = removeUnicodeChars(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
 		logger.Warn("", zap.String("Reason", c.Reason))
+		return
+	}
+
+	if c.State != "" {
 		return
 	}
 
@@ -309,7 +309,12 @@ func runAudit(audit string) (output string, err error) {
 }
 
 func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
-
+	if c.auditer != nil {
+		if len(c.customConfigs) == 0 {
+			c.customConfigs = append(c.customConfigs, c.Audit)
+		}
+		output, errMessage, state = c.auditer.Execute(c.customConfigs...)
+	}
 	// If check type is manual, force result to WARN.
 	if c.Type == MANUAL {
 		return output, errMessage, WARN
@@ -317,12 +322,6 @@ func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
 
 	if c.Type == "skip" {
 		return output, errMessage, INFO
-	}
-	if c.auditer != nil {
-		if len(c.customConfigs) == 0 {
-			c.customConfigs = append(c.customConfigs, c.Audit)
-		}
-		return c.auditer.Execute(c.customConfigs...)
 	}
 	return
 }

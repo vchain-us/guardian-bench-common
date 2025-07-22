@@ -20,9 +20,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/vchain-us/guardian-bench-common/check"
 	"github.com/vchain-us/guardian-bench-common/log"
-	"github.com/fatih/color"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
@@ -155,7 +155,7 @@ func multiWordReplace(s string, subname string, sub string) string {
 
 func printRawOutput(output string) {
 	for _, row := range strings.Split(output, "\n") {
-		fmt.Println(fmt.Sprintf("\t %s", row))
+		fmt.Printf("\t %s\n", row)
 	}
 }
 

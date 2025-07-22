@@ -34,9 +34,9 @@ import (
 type binOp string
 
 const (
-	and                   binOp = "and"
-	or                          = "or"
-	defaultArraySeparator       = ","
+	and                   binOp  = "and"
+	or                    binOp  = "or"
+	defaultArraySeparator string = ","
 )
 
 type testItem struct {
@@ -161,9 +161,7 @@ func toNumeric(a, b string) (c, d int, err error) {
 	}
 	d, err = strconv.Atoi(b)
 	if err != nil {
-		if err != nil {
-			return c, d, fmt.Errorf("failed converting %s to integer, %s", b, err)
-		}
+		return c, d, fmt.Errorf("failed converting %s to integer, %s", b, err)
 	}
 
 	return c, d, nil
