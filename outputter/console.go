@@ -1,8 +1,8 @@
 package outputter
 
 import (
-	"github.com/aquasecurity/bench-common/check"
-	"github.com/aquasecurity/bench-common/util"
+	"github.com/vchain-us/guardian-bench-common/check"
+	"github.com/vchain-us/guardian-bench-common/util"
 )
 
 // Console outputter functionality for Standard output

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/aquasecurity/bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/log"
 	"io/ioutil"
 	"os"
 
-	"github.com/aquasecurity/bench-common/check"
-	"github.com/aquasecurity/bench-common/outputter"
-	"github.com/aquasecurity/bench-common/util"
+	"github.com/vchain-us/guardian-bench-common/check"
+	"github.com/vchain-us/guardian-bench-common/outputter"
+	"github.com/vchain-us/guardian-bench-common/util"
 	"github.com/spf13/cobra"
 )
 

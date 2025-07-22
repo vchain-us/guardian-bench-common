@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aquasecurity/bench-common/auditeval"
+	"github.com/vchain-us/guardian-bench-common/auditeval"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v3"
 )

@@ -20,8 +20,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aquasecurity/bench-common/check"
-	"github.com/aquasecurity/bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/check"
+	"github.com/vchain-us/guardian-bench-common/log"
 	"github.com/fatih/color"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"

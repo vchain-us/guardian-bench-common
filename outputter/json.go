@@ -3,7 +3,7 @@ package outputter
 import (
 	"fmt"
 
-	"github.com/aquasecurity/bench-common/check"
+	"github.com/vchain-us/guardian-bench-common/check"
 )
 
 // JSON outputter functionality for JSON payload

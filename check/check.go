@@ -24,8 +24,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/aquasecurity/bench-common/auditeval"
-	"github.com/aquasecurity/bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/auditeval"
+	"github.com/vchain-us/guardian-bench-common/log"
 	"go.uber.org/zap"
 )
 
@@ -152,14 +152,6 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 		return
 	}
 
-	//If check type is manual, force result to WARN
-	if c.Type == MANUAL {
-		c.Reason = "Test marked as a manual test"
-		c.State = WARN
-		logger.Warn("", zap.String("Reason", c.Reason))
-		return
-	}
-
 	// Since this is an Scored check
 	// without tests return a 'WARN' to alert
 	// the user that this check needs attention
@@ -209,6 +201,14 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 	}
 
 	if c.State != "" {
+		return
+	}
+
+	//If check type is manual, force result to WARN
+	if c.Type == MANUAL {
+		c.Reason = "Test marked as a manual test"
+		c.State = WARN
+		logger.Warn("", zap.String("Reason", c.Reason))
 		return
 	}
 

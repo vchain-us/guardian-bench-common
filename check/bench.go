@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aquasecurity/bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/log"
 	"go.uber.org/zap"
 
 	"gopkg.in/yaml.v3"

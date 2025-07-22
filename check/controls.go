@@ -20,7 +20,7 @@ import (
 	"encoding/xml"
 	"fmt"
 
-	"github.com/aquasecurity/bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/log"
 	"go.uber.org/zap"
 
 	"github.com/onsi/ginkgo/reporters"

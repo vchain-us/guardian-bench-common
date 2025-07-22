@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aquasecurity/bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/log"
 	"go.uber.org/zap"
 
 	yaml "gopkg.in/yaml.v3"
