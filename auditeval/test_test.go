@@ -839,7 +839,7 @@ func TestTestUnmarshal(t *testing.T) {
 	}
 	cases := []struct {
 		content        string
-		jsonInterface  interface{}
+		jsonInterface  any
 		expectedToFail bool
 	}{
 		{

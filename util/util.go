@@ -17,13 +17,14 @@ package util
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/aquasecurity/bench-common/check"
 	"github.com/aquasecurity/bench-common/log"
 	"github.com/fatih/color"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
-	"os"
-	"strings"
 )
 
 var (
@@ -100,7 +101,7 @@ func PrettyPrint(r *check.Controls, summary check.Summary, noRemediations, inclu
 		colors[check.WARN].Printf("== Remediations ==\n")
 		for _, g := range r.Groups {
 			for _, c := range g.Checks {
-				if (c.State != check.PASS && c.Reason == "") || (c.Type == "manual") {
+				if (c.State != check.PASS && c.Reason == "") || (c.Type == check.MANUAL) {
 					fmt.Printf("%s %s\n", c.ID, c.Remediation)
 				} else if c.State != check.PASS {
 					fmt.Printf("%s %s\n", c.ID, c.Reason)

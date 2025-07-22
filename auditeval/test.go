@@ -19,12 +19,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aquasecurity/bench-common/log"
-	"go.uber.org/zap"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/aquasecurity/bench-common/log"
+	"go.uber.org/zap"
 
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/client-go/util/jsonpath"
@@ -208,7 +209,7 @@ func (t *testItem) evaluate(output string) (TestResult bool, ExpectedResult stri
 	defer logger.Sync() // nolint: errcheck
 
 	if t.Flag == "" {
-		var jsonInterface interface{}
+		var jsonInterface any
 
 		if t.Path != "" {
 			err := unmarshal(output, &jsonInterface)
@@ -394,7 +395,7 @@ func splitAndRemoveLastSeparator(s, sep string) []string {
 	return ts
 }
 
-func unmarshal(s string, jsonInterface *interface{}) error {
+func unmarshal(s string, jsonInterface *any) error {
 	// We don't know whether it's YAML or JSON but
 	// we can just try one then the other
 	data := []byte(s)
@@ -408,7 +409,7 @@ func unmarshal(s string, jsonInterface *interface{}) error {
 	return nil
 }
 
-func executeJSONPath(path string, jsonInterface interface{}) (string, error) {
+func executeJSONPath(path string, jsonInterface any) (string, error) {
 	j := jsonpath.New("jsonpath")
 	j.AllowMissingKeys(true)
 	err := j.Parse(path)
@@ -425,7 +426,7 @@ func executeJSONPath(path string, jsonInterface interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-func (t *testItem) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (t *testItem) UnmarshalYAML(unmarshal func(any) error) error {
 	type buildTest testItem
 
 	// Make Set parameter to be treu by default.

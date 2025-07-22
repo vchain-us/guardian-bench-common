@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+
 	"github.com/aquasecurity/bench-common/log"
 	"go.uber.org/zap"
 
@@ -27,7 +28,7 @@ import (
 
 // Auditer represents the Execute method to be called.
 type Auditer interface {
-	Execute(customConfig ...interface{}) (result string, errMsg string, state State)
+	Execute(customConfig ...any) (result string, errMsg string, state State)
 }
 
 // Controls holds all controls to check for master nodes.
@@ -39,7 +40,7 @@ type Controls struct {
 	Groups      []*Group `json:"tests" yaml:"groups"`
 	Summary
 	DefinedConstraints map[string][]string
-	customConfigs      []interface{}
+	customConfigs      []any
 }
 
 // Summary is a summary of the results of control checks run.

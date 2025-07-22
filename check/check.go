@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
-	"unicode"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"unicode"
 
 	"github.com/aquasecurity/bench-common/auditeval"
 	"github.com/aquasecurity/bench-common/log"
@@ -42,7 +42,7 @@ const TypeAudit = "audit"
 type Audit string
 
 // Execute method called by the main logic to execute the Audit's Execute type.
-func (audit Audit) Execute(customConfig ...interface{}) (result string, errMessage string, state State) {
+func (audit Audit) Execute(customConfig ...any) (result string, errMessage string, state State) {
 
 	res, err := runAudit(string(audit))
 
@@ -67,6 +67,8 @@ const (
 	INFO = "INFO"
 	// SKIP for when a check should be skipped.
 	SKIP = "skip"
+	// MANUAL for manual check type.
+	MANUAL = "manual"
 )
 
 func handleError(err error, context string) (errmsg string) {
@@ -79,14 +81,14 @@ func handleError(err error, context string) (errmsg string) {
 // BaseCheck (Original version) - checks don't have sub checks, each check has only one sub check as part of the check itself
 type BaseCheck struct {
 	AuditType     AuditType           `json:"audit_type"`
-	Audit         interface{}         `json:"audit"`
+	Audit         any                 `json:"audit"`
 	Type          string              `json:"type"`
 	Commands      []*exec.Cmd         `json:"-"`
 	Tests         *auditeval.Tests    `json:"-"`
 	Remediation   string              `json:"-"`
 	Constraints   map[string][]string `yaml:"constraints"`
 	auditer       Auditer
-	customConfigs []interface{}
+	customConfigs []any
 }
 
 // SubCheck additional check to be performed.
@@ -102,7 +104,7 @@ type Check struct {
 	Set            bool             `json:"-"`
 	SubChecks      []*SubCheck      `yaml:"sub_checks"`
 	AuditType      AuditType        `json:"audit_type"`
-	Audit          interface{}      `json:"audit"`
+	Audit          any              `json:"audit"`
 	Type           string           `json:"type"`
 	Commands       []*exec.Cmd      `json:"-"`
 	Tests          *auditeval.Tests `json:"-"`
@@ -114,7 +116,7 @@ type Check struct {
 	Scored         bool   `json:"scored"`
 	IsMultiple     bool   `yaml:"use_multiple_values"`
 	auditer        Auditer
-	customConfigs  []interface{}
+	customConfigs  []any
 	Reason         string `json:"reason,omitempty"`
 }
 
@@ -128,7 +130,7 @@ type Group struct {
 	Checks      []*Check            `json:"results"`
 	Pass        int                 `json:"pass"` // Tests with no type that passed
 	Fail        int                 `json:"fail"` // Tests with no type that failed
-	Warn        int                 `json:"warn"` // Tests of type manual won't be run and will be marked as Warn
+	Warn        int                 `json:"warn"` // Tests of type MANUAL won't be run and will be marked as Warn
 	Info        int                 `json:"info"` // Tests of type skip won't be run and will be marked as Info
 }
 
@@ -151,7 +153,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 	}
 
 	//If check type is manual, force result to WARN
-	if c.Type == "manual" {
+	if c.Type == MANUAL {
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
 		logger.Warn("", zap.String("Reason", c.Reason))
@@ -261,8 +263,6 @@ func IsBottlerocket() (bool, error) {
 	return false, nil
 }
 
-
-
 func runAudit(audit string) (output string, err error) {
 	var out bytes.Buffer
 
@@ -310,7 +310,7 @@ func runAudit(audit string) (output string, err error) {
 func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
 
 	// If check type is manual, force result to WARN.
-	if c.Type == "manual" {
+	if c.Type == MANUAL {
 		return output, errMessage, WARN
 	}
 

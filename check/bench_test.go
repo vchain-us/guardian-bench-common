@@ -25,7 +25,7 @@ groups:
             op: eq
             value: false
           set: true
-      remediation: "Edit the $apiserverconf file on the master node and set 
+      remediation: "Edit the $apiserverconf file on the master node and set
               the KUBE_ALLOW_PRIV parameter to \"--allow-privileged=false\""
       scored: true
 `
@@ -42,7 +42,7 @@ groups:
       text: "Check host IP"
       audittype: "check_ip"
       audit:
-         url: https://api.ipify.org?format=json 
+         url: https://api.ipify.org?format=json
       tests:
         test_items:
         - flag: "192.168.1.1"
@@ -55,11 +55,11 @@ func TestRegisterAuditType(t *testing.T) {
 
 	bench := NewBench()
 
-	if err := bench.RegisterAuditType(TypeAudit, func() interface{} { return Audit("test") }); err != nil {
+	if err := bench.RegisterAuditType(TypeAudit, func() any { return Audit("test") }); err != nil {
 		t.Errorf("Failed to register new Audit type")
 		return
 	}
-	if err := bench.RegisterAuditType(TypeAudit, func() interface{} { return Audit("test") }); err == nil {
+	if err := bench.RegisterAuditType(TypeAudit, func() any { return Audit("test") }); err == nil {
 		t.Errorf("RegisterAuditType should have failed on duplicate types")
 		return
 	}
@@ -70,7 +70,7 @@ type ipAuditMock struct {
 	URL string
 }
 
-func (a ipAuditMock) Execute(customConfig ...interface{}) (result string, errMessage string, state State) {
+func (a ipAuditMock) Execute(customConfig ...any) (result string, errMessage string, state State) {
 	//I don't really implement checking ip here, since the goal of this mock to test custom audit type
 	return "", "", PASS
 }
@@ -93,7 +93,7 @@ func TestNewControlsType(t *testing.T) {
 			false},
 	}
 	b := NewBench()
-	b.RegisterAuditType("check_ip", func() interface{} { return &ipAuditMock{} })
+	b.RegisterAuditType("check_ip", func() any { return &ipAuditMock{} })
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := b.NewControls(tt.args.in, tt.args.definitions)

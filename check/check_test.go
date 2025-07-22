@@ -32,7 +32,7 @@ sub_checks:
         compare:
           op: eq
           value: ""
-        set: true			  
+        set: true
     remediation: "It should pass :) "
     scored: true
 `
@@ -53,7 +53,7 @@ func TestCheck_Run(t *testing.T) {
 		t.Fatalf("error unmarshaling check yaml %v", err)
 	}
 
-	checkTypeManual := Check{Type: "manual", Tests: ts, Scored: true, auditer: Audit("ps -ef")}
+	checkTypeManual := Check{Type: MANUAL, Tests: ts, Scored: true, auditer: Audit("ps -ef")}
 	checkTypeSkip := Check{Type: "skip", Tests: ts, Scored: true, auditer: Audit("ps -ef")}
 	checkNoTests := Check{Type: "", Scored: true, auditer: Audit("")}
 	checkScoredFail := Check{Scored: true, Tests: ts, auditer: Audit("echo anything")}
@@ -291,7 +291,7 @@ func TestRunAuditCommands(t *testing.T) {
 	}{
 		{
 			// 0
-			b: BaseCheck{auditer: Audit("anything"), Type: "manual"},
+			b: BaseCheck{auditer: Audit("anything"), Type: MANUAL},
 			s: "WARN",
 		}, {
 			// 1

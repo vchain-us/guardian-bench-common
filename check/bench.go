@@ -16,29 +16,30 @@ package check
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/aquasecurity/bench-common/log"
 	"go.uber.org/zap"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Bench implementer of this interface represent audit types to be tests.
 type Bench interface {
-	RegisterAuditType(auditType AuditType, typeCallback func() interface{}) error
-	NewControls(in []byte, definitions []string, customConfigs ...interface{}) (*Controls, error)
+	RegisterAuditType(auditType AuditType, typeCallback func() any) error
+	NewControls(in []byte, definitions []string, customConfigs ...any) (*Controls, error)
 }
 
 type bench struct {
-	auditTypeRegistry map[AuditType]func() interface{}
+	auditTypeRegistry map[AuditType]func() any
 }
 
 // NewBench returns a new Bench
 func NewBench() Bench {
-	return &bench{auditTypeRegistry: make(map[AuditType]func() interface{})}
+	return &bench{auditTypeRegistry: make(map[AuditType]func() any)}
 }
 
-func (b *bench) RegisterAuditType(auditType AuditType, typeCallback func() interface{}) error {
+func (b *bench) RegisterAuditType(auditType AuditType, typeCallback func() any) error {
 
 	if _, ok := b.auditTypeRegistry[auditType]; ok {
 		return fmt.Errorf("audit type %v already registered", auditType)
@@ -52,7 +53,7 @@ func (b *bench) RegisterAuditType(auditType AuditType, typeCallback func() inter
 
 }
 
-func (b *bench) NewControls(in []byte, definitions []string, customConfigs ...interface{}) (*Controls, error) {
+func (b *bench) NewControls(in []byte, definitions []string, customConfigs ...any) (*Controls, error) {
 	c := new(Controls)
 	err := yaml.Unmarshal(in, c)
 	if err != nil {
@@ -85,10 +86,10 @@ func (b *bench) NewControls(in []byte, definitions []string, customConfigs ...in
 	return c, nil
 }
 
-func (b *bench) convertAuditToRegisteredType(auditType AuditType, audit interface{}) (auditer Auditer, err error) {
+func (b *bench) convertAuditToRegisteredType(auditType AuditType, audit any) (auditer Auditer, err error) {
 
 	var auditBytes []byte
-	var callback func() interface{}
+	var callback func() any
 	var ok bool
 
 	if auditType == "" || auditType == TypeAudit {
