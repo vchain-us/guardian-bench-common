@@ -202,7 +202,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 
 	//If check type is manual, force result to WARN
 	if c.Type == MANUAL {
-		c.ActualValue = removeUnicodeChars(out)
+		c.ActualValue = removeUnicodeCharsKeepNewline(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
 		logger.Warn("", zap.String("Reason", c.Reason))
@@ -239,6 +239,20 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 // removeUnicodeChars remove non-printable characters from the output
 func removeUnicodeChars(value string) string {
 	cleanValue := strings.Map(func(r rune) rune {
+		if unicode.IsGraphic(r) {
+			return r
+		}
+		return -1
+	}, value)
+	return cleanValue
+}
+
+// removeUnicodeCharsKeepNewline remove non-printable characters from the output, keeping newlines
+func removeUnicodeCharsKeepNewline(value string) string {
+	cleanValue := strings.Map(func(r rune) rune {
+		if r == '\n' {
+			return r
+		}
 		if unicode.IsGraphic(r) {
 			return r
 		}
