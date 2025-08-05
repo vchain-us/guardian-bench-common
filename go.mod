@@ -3,7 +3,6 @@ module github.com/vchain-us/guardian-bench-common
 go 1.23
 
 require (
-	github.com/aquasecurity/bench-common v0.4.8
 	github.com/fatih/color v1.14.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/mitchellh/go-homedir v1.1.0
