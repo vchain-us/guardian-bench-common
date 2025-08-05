@@ -332,6 +332,9 @@ func compareOp(tCompareOp, flagVal, tCompareValue, flagName string) (bool, strin
 		testResult = allElementsValid(s, target)
 
 	case "bitmask":
+		if flagVal == "" {
+			flagVal = "0"
+		}
 		expectedResultPattern = "'%s' has permissions " + flagVal + ", expected %s or more restrictive"
 		requested, err := strconv.ParseInt(flagVal, 8, 64)
 		if err != nil {
