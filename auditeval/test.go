@@ -331,6 +331,7 @@ func compareOp(tCompareOp, flagVal, tCompareValue, flagName string) (bool, strin
 
 	case "bitmask":
 		if flagVal == "" {
+			logger.Debug(`Fixing flagVal from '' to 0`)
 			flagVal = "0"
 		}
 		expectedResultPattern = "'%s' has permissions " + flagVal + ", expected %s or more restrictive"

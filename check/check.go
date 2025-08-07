@@ -262,13 +262,17 @@ func removeUnicodeCharsKeepNewline(value string) string {
 }
 
 func IsBottlerocket() (bool, error) {
-	out, err := exec.Command("cat", "/etc/os-release").Output()
+	_, err := os.Stat("/etc/os-release")
+	if err != nil && os.IsNotExist(err) {
+		return false, nil
+	}
+	out, err := os.ReadFile("/etc/os-release")
 	if err != nil {
 		return false, err
 	}
 	output := strings.ToLower(string(out))
-	output = strings.Replace(output, `"`, "", -1)
-	output = strings.Replace(output, `_id`, "", -1) // version_id kills the regex
+	output = strings.ReplaceAll(output, `"`, "")
+	output = strings.ReplaceAll(output, `_id`, "") // version_id kills the regex
 
 	flagRe := regexp.MustCompile("id" + `=([^ \n]*)`)
 	vals := flagRe.FindStringSubmatch(output)
