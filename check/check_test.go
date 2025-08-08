@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vchain-us/guardian-bench-common/auditeval"
 	"github.com/stretchr/testify/assert"
+	"github.com/vchain-us/guardian-bench-common/auditeval"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -291,11 +291,13 @@ func TestRunAuditCommands(t *testing.T) {
 	}{
 		{
 			// 0
-			b: BaseCheck{auditer: Audit("anything"), Type: MANUAL},
-			s: "WARN",
+			b:   BaseCheck{auditer: Audit("anything"), Type: MANUAL},
+			s:   "WARN",
+			o:   "/bin/sh: line 1: anything: command not found",
+			err: true,
 		}, {
 			// 1
-			b: BaseCheck{auditer: Audit("anything"), Type: "skip"},
+			b: BaseCheck{auditer: Audit("anything"), Type: SKIP},
 			s: "INFO",
 		}, {
 			// 3

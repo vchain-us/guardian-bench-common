@@ -261,14 +261,23 @@ func removeUnicodeCharsKeepNewline(value string) string {
 	return cleanValue
 }
 
+var _isBottleRocked *bool
+
 func IsBottlerocket() (bool, error) {
+	if _isBottleRocked != nil {
+		return *_isBottleRocked, nil
+	}
+	retValue := false
+	defer func() {
+		_isBottleRocked = &retValue
+	}()
 	_, err := os.Stat("/etc/os-release")
 	if err != nil && os.IsNotExist(err) {
-		return false, nil
+		return retValue, nil
 	}
 	out, err := os.ReadFile("/etc/os-release")
 	if err != nil {
-		return false, err
+		return retValue, err
 	}
 	output := strings.ToLower(string(out))
 	output = strings.ReplaceAll(output, `"`, "")
@@ -277,9 +286,9 @@ func IsBottlerocket() (bool, error) {
 	flagRe := regexp.MustCompile("id" + `=([^ \n]*)`)
 	vals := flagRe.FindStringSubmatch(output)
 	if len(vals) > 1 && vals[1] == "bottlerocket" {
-		return true, nil
+		retValue = true
 	}
-	return false, nil
+	return retValue, nil
 }
 
 func runAudit(audit string) (output string, err error) {
@@ -327,6 +336,9 @@ func runAudit(audit string) (output string, err error) {
 }
 
 func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
+	if c.Type == "skip" {
+		return output, errMessage, INFO
+	}
 	if c.auditer != nil {
 		if len(c.customConfigs) == 0 {
 			c.customConfigs = append(c.customConfigs, c.Audit)
@@ -336,10 +348,6 @@ func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
 	// If check type is manual, force result to WARN.
 	if c.Type == MANUAL {
 		return output, errMessage, WARN
-	}
-
-	if c.Type == "skip" {
-		return output, errMessage, INFO
 	}
 	return
 }
