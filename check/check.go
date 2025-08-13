@@ -185,6 +185,9 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 			return
 		}
 	}
+	if c.Type == "" && subCheck != nil && subCheck.Type == MANUAL {
+		c.Type = MANUAL
+	}
 
 	var out, errmsgs string
 
