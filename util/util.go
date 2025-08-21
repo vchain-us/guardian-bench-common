@@ -224,10 +224,10 @@ func MakeSubstitutions(s string, ext string, m map[string]string) string {
 	for k, v := range m {
 		subst := "$" + k + ext
 		if v == "" {
-			logger.Info(fmt.Sprintf("No substitution for '%s'\n", subst))
+			logger.Debug(fmt.Sprintf("No substitution for '%s'\n", subst))
 			continue
 		}
-		logger.Info(fmt.Sprintf("Substituting %s with '%s'\n", subst, v))
+		logger.Debug(fmt.Sprintf("Substituting %s with '%s'\n", subst, v))
 		s = multiWordReplace(s, subst, v)
 	}
 

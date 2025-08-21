@@ -241,8 +241,8 @@ func (t *testItem) evaluate(output string) (TestResult bool, ExpectedResult stri
 		r, _ := regexp.MatchString(t.Flag+`(?:[^a-zA-Z0-9-_]|$)`, output)
 		TestResult = !r
 	}
-	logger.Warn("evaluate ExpectedResult: ", zap.String("ExpectedResult", ExpectedResult))
-	logger.Warn("evaluate TestResult ", zap.Bool("TestResult", TestResult))
+	logger.Debug("evaluate ExpectedResult: ", zap.String("ExpectedResult", ExpectedResult))
+	logger.Debug("evaluate TestResult ", zap.Bool("TestResult", TestResult))
 	if err != nil {
 		logger.Info("evaluate Error: ", zap.Error(err))
 	}
@@ -258,7 +258,7 @@ func compareOp(tCompareOp, flagVal, tCompareValue, flagName string) (bool, strin
 		panic(err)
 	}
 	defer logger.Sync() // nolint: errcheck
-	logger.Warn("Actual value flag: ", zap.String("flagName", flagName), zap.String("flagVal", flagVal))
+	logger.Debug("Actual value flag: ", zap.String("flagName", flagName), zap.String("flagVal", flagVal))
 	switch tCompareOp {
 	case "eq":
 		expectedResultPattern = "'%s' is equal to '%s'"

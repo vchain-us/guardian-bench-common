@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/vchain-us/guardian-bench-common/log"
-	"io/ioutil"
 	"os"
 
+	"github.com/vchain-us/guardian-bench-common/log"
+
+	"github.com/spf13/cobra"
 	"github.com/vchain-us/guardian-bench-common/check"
 	"github.com/vchain-us/guardian-bench-common/outputter"
 	"github.com/vchain-us/guardian-bench-common/util"
-	"github.com/spf13/cobra"
 )
 
 func app(cmd *cobra.Command, args []string) {
@@ -78,13 +78,13 @@ func runControls(controls *check.Controls, checkList string) check.Summary {
 }
 
 func getControls(path string, constraints []string, substitutionFile string) (*check.Controls, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 	s := string(data)
 	if substitutionFile != "" {
-		substitutionData, err := ioutil.ReadFile(substitutionFile)
+		substitutionData, err := os.ReadFile(substitutionFile)
 		if err != nil {
 			return nil, err
 		}

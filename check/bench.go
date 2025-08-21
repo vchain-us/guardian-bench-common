@@ -28,15 +28,17 @@ import (
 type Bench interface {
 	RegisterAuditType(auditType AuditType, typeCallback func() any) error
 	NewControls(in []byte, definitions []string, customConfigs ...any) (*Controls, error)
+	SetEnv(key, value string)
 }
 
 type bench struct {
 	auditTypeRegistry map[AuditType]func() any
+	environ           map[string]string
 }
 
 // NewBench returns a new Bench
 func NewBench() Bench {
-	return &bench{auditTypeRegistry: make(map[AuditType]func() any)}
+	return &bench{auditTypeRegistry: make(map[AuditType]func() any), environ: make(map[string]string)}
 }
 
 func (b *bench) RegisterAuditType(auditType AuditType, typeCallback func() any) error {
@@ -60,6 +62,7 @@ func (b *bench) NewControls(in []byte, definitions []string, customConfigs ...an
 		return nil, fmt.Errorf("failed to unmarshal YAML: %s", err)
 	}
 
+	c.Environ = b.environ
 	logger, err := log.ZapLogger(nil, nil)
 	if err != nil {
 		panic(err)
@@ -136,4 +139,8 @@ func (b *bench) extractAllAudits(controls *Controls) (err error) {
 		}
 	}
 	return err
+}
+
+func (b *bench) SetEnv(k, v string) {
+	b.environ[k] = v
 }

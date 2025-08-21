@@ -26,9 +26,11 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 )
 
+type Environ *map[string]string
+
 // Auditer represents the Execute method to be called.
 type Auditer interface {
-	Execute(customConfig ...any) (result string, errMsg string, state State)
+	Execute(e Environ, customConfig ...any) (result string, errMsg string, state State)
 }
 
 // Controls holds all controls to check for master nodes.
@@ -40,6 +42,7 @@ type Controls struct {
 	Groups      []*Group `json:"tests" yaml:"groups"`
 	Summary
 	DefinedConstraints map[string][]string
+	Environ            map[string]string
 	customConfigs      []any
 }
 
@@ -62,6 +65,13 @@ func NewControls(in []byte, definitions []string, version ...string) (*Controls,
 		c.Version = version[0]
 	}
 	return c, nil
+}
+
+func (controls *Controls) SetEnv(k, v string) {
+	if controls.Environ == nil {
+		controls.Environ = make(map[string]string)
+	}
+	controls.Environ[k] = v
 }
 
 // RunGroup runs all checks in a group.
@@ -91,7 +101,7 @@ func (controls *Controls) RunGroup(gids ...string) Summary {
 					if group.Type == SKIP {
 						check.Type = SKIP
 					}
-					check.Run(controls.DefinedConstraints)
+					check.Run(controls.DefinedConstraints, &controls.Environ)
 					check.TestInfo = append(check.TestInfo, check.Remediation)
 					summarize(controls, check)
 					summarizeGroup(group, check)
@@ -122,7 +132,7 @@ func (controls *Controls) RunChecks(ids ...string) Summary {
 		for _, check := range group.Checks {
 			for _, id := range ids {
 				if id == check.ID {
-					check.Run(controls.DefinedConstraints)
+					check.Run(controls.DefinedConstraints, &controls.Environ)
 					check.TestInfo = append(check.TestInfo, check.Remediation)
 					summarize(controls, check)
 

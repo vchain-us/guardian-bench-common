@@ -70,7 +70,7 @@ func TestCheck_Run(t *testing.T) {
 
 	for i, testCase := range testCases {
 
-		testCase.check.Run(testDefinedConstraints)
+		testCase.check.Run(testDefinedConstraints, nil)
 
 		if testCase.check.State != testCase.Expected {
 			t.Errorf("test failed - number %d, expected %s, actual %s\n", i, testCase.Expected, testCase.check.State)
@@ -264,7 +264,8 @@ hello
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var errMsg string
-			output, err := runAudit(tt.args.audit)
+			a := Audit(tt.args.audit)
+			output, err := a.run(nil)
 			if err != nil {
 				errMsg = err.Error()
 			}

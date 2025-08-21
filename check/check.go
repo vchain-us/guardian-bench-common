@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/vchain-us/guardian-bench-common/auditeval"
@@ -38,13 +39,13 @@ type AuditType string
 // TypeAudit string representing default "Audit".
 const TypeAudit = "audit"
 
-// Audit string that holds audit to execute.
+// Audit string that holds audit to execute with its environment
 type Audit string
 
 // Execute method called by the main logic to execute the Audit's Execute type.
-func (audit Audit) Execute(customConfig ...any) (result string, errMessage string, state State) {
+func (audit Audit) Execute(env Environ, customConfig ...any) (result string, errMessage string, state State) {
 
-	res, err := runAudit(string(audit))
+	res, err := audit.run(env)
 
 	// Errors mean the audit command failed, but that might be what we expect
 	// for example, if we grep for something that is not found, there is a non-zero exit code
@@ -89,6 +90,7 @@ type BaseCheck struct {
 	Constraints   map[string][]string `yaml:"constraints"`
 	auditer       Auditer
 	customConfigs []any
+	environ       *map[string]string
 }
 
 // SubCheck additional check to be performed.
@@ -118,6 +120,7 @@ type Check struct {
 	auditer        Auditer
 	customConfigs  []any
 	Reason         string `json:"reason,omitempty"`
+	environ        *map[string]string
 }
 
 // Group is a collection of similar checks.
@@ -136,19 +139,19 @@ type Group struct {
 
 // Run executes the audit commands specified in a check and outputs
 // the results.
-func (c *Check) Run(definedConstraints map[string][]string) {
+func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]string) {
 	logger, err := log.ZapLogger(nil, nil)
 	if err != nil {
 		panic(err)
 	}
 	defer logger.Sync() // nolint: errcheck
 
-	logger.Warn("----- Running check  ----- ", zap.String("check ID", c.ID))
+	logger.Info("----- Running check  ----- ", zap.String("check ID", c.ID))
 	// If check type is skip, force result to INFO
 	if c.Type == SKIP {
 		c.Reason = "Test marked as skip"
 		c.State = INFO
-		logger.Warn("", zap.String("Reason", c.Reason))
+		logger.Info("Skipped", zap.String("Reason", c.Reason))
 		return
 	}
 
@@ -158,7 +161,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 	if len(strings.TrimSpace(c.Type)) == 0 && c.Tests == nil && c.SubChecks == nil {
 		c.Reason = "There are no test items"
 		c.State = WARN
-		logger.Warn("", zap.String("Reason", c.Reason))
+		logger.Warn("Skipped", zap.String("Reason", c.Reason))
 		return
 	}
 
@@ -173,6 +176,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 			AuditType:     c.AuditType,
 			auditer:       c.auditer,
 			customConfigs: c.customConfigs,
+			environ:       environ,
 		}
 	} else {
 		subCheck = getFirstValidSubCheck(c.SubChecks, definedConstraints)
@@ -181,7 +185,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 			c.Reason = "Failed to find a valid sub check, check your constraints "
 			c.State = WARN
 			logger.Debug("Failed to find a valid sub check, check your constraints")
-			logger.Warn("", zap.String("Reason", c.Reason))
+			logger.Warn("Skipped", zap.String("Reason", c.Reason))
 			return
 		}
 	}
@@ -191,6 +195,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 
 	var out, errmsgs string
 
+	t0 := time.Now()
 	out, errmsgs, c.State = runAuditCommands(*subCheck)
 
 	if errmsgs != "" {
@@ -199,7 +204,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 		// Make output more readable
 		if (errmsgs == "exit status 127" || errmsgs == "exit status 1") && strings.HasSuffix(out, "not found\n") {
 			c.Reason = strings.Replace(c.Reason, "sh: 1:", "Command", -1)
-			logger.Warn("", zap.String("Reason", c.Reason))
+			logger.Warn("Error in audit command", zap.String("Reason", c.Reason))
 		}
 	}
 
@@ -208,7 +213,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 		c.ActualValue = removeUnicodeCharsKeepNewline(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
-		logger.Warn("", zap.String("Reason", c.Reason))
+		logger.Info("Manual", zap.String("Reason", c.Reason), zap.Duration("Duration", time.Since(t0)))
 		return
 	}
 
@@ -236,7 +241,7 @@ func (c *Check) Run(definedConstraints map[string][]string) {
 		logger.Warn("", zap.String("Reason", c.Reason))
 		return
 	}
-	logger.Warn("", zap.Bool("TestResult", finalOutput.TestResult), zap.String("State", string(c.State)))
+	logger.Info("Done", zap.Bool("TestResult", finalOutput.TestResult), zap.String("State", string(c.State)), zap.Duration("Duration", time.Since(t0)))
 }
 
 // removeUnicodeChars remove non-printable characters from the output
@@ -294,7 +299,7 @@ func IsBottlerocket() (bool, error) {
 	return retValue, nil
 }
 
-func runAudit(audit string) (output string, err error) {
+func (a *Audit) run(env Environ) (output string, err error) {
 	var out bytes.Buffer
 
 	logger, err := log.ZapLogger(nil, nil)
@@ -303,7 +308,7 @@ func runAudit(audit string) (output string, err error) {
 	}
 	defer logger.Sync() // nolint: errcheck
 
-	audit = strings.TrimSpace(audit)
+	audit := strings.TrimSpace(string(*a))
 	if len(audit) == 0 {
 		return output, err
 	}
@@ -326,14 +331,19 @@ func runAudit(audit string) (output string, err error) {
 	cmd.Stdin = strings.NewReader(audit)
 	cmd.Stdout = &out
 	cmd.Stderr = &out
+	if env != nil {
+		for k, v := range *env {
+			cmd.Env = append(cmd.Environ(), fmt.Sprintf("%s=%s", k, v))
+		}
+	}
 	err = cmd.Run()
 	output = out.String()
 
 	if err != nil {
 		err = fmt.Errorf("failed to run: %q, output: %q, error: %s", audit, output, err)
 	} else {
-		logger.Warn("", zap.String("Command", audit))
-		logger.Warn("", zap.String("Output", output))
+		logger.Info("", zap.String("Command", audit))
+		logger.Info("", zap.String("Output", output))
 	}
 	return output, err
 }
@@ -346,7 +356,7 @@ func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
 		if len(c.customConfigs) == 0 {
 			c.customConfigs = append(c.customConfigs, c.Audit)
 		}
-		output, errMessage, state = c.auditer.Execute(c.customConfigs...)
+		output, errMessage, state = c.auditer.Execute(c.environ, c.customConfigs...)
 	}
 	// If check type is manual, force result to WARN.
 	if c.Type == MANUAL {
