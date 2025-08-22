@@ -203,22 +203,32 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 		c.Reason = out
 		// Make output more readable
 		if (errmsgs == "exit status 127" || errmsgs == "exit status 1") && strings.HasSuffix(out, "not found\n") {
-			c.Reason = strings.Replace(c.Reason, "sh: 1:", "Command", -1)
+			c.Reason = strings.ReplaceAll(c.Reason, "sh: 1:", "Command")
 			logger.Warn("Error in audit command", zap.String("Reason", c.Reason))
 		}
 	}
+	finalOutput := c.evaluateTest(out, subCheck, logger)
+	/*
+	 */
+	testResult := false
+	if finalOutput != nil {
+		testResult = finalOutput.TestResult
+	}
+	logger.Info("Done", zap.Bool("TestResult", testResult), zap.String("State", string(c.State)), zap.Duration("Duration", time.Since(t0)))
+}
 
+func (c *Check) evaluateTest(out string, subCheck *BaseCheck, logger *zap.Logger) *auditeval.TestOutput {
 	//If check type is manual, force result to WARN
 	if c.Type == MANUAL {
 		c.ActualValue = removeUnicodeCharsKeepNewline(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
-		logger.Info("Manual", zap.String("Reason", c.Reason), zap.Duration("Duration", time.Since(t0)))
-		return
+		logger.Info("Manual", zap.String("Reason", c.Reason))
+		return nil
 	}
 
 	if c.State != "" {
-		return
+		return nil
 	}
 
 	finalOutput := subCheck.Tests.Execute(out, c.ID, c.IsMultiple)
@@ -239,9 +249,8 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 		logger.Debug("Test output contains a nil value")
 		c.Reason = "Test output contains a nil value"
 		logger.Warn("", zap.String("Reason", c.Reason))
-		return
 	}
-	logger.Info("Done", zap.Bool("TestResult", finalOutput.TestResult), zap.String("State", string(c.State)), zap.Duration("Duration", time.Since(t0)))
+	return finalOutput
 }
 
 // removeUnicodeChars remove non-printable characters from the output
