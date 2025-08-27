@@ -117,7 +117,19 @@ func (controls *Controls) RunGroup(gids ...string) Summary {
 		}
 
 	}
-
+	controls.asyncfind.Scan()
+	controls.asyncfind.Wait()
+	for _, group := range controls.Groups {
+		for _, gid := range gids {
+			if gid == group.ID {
+				for _, check := range group.Checks {
+					if check.State == "ASYNC" {
+						check.asyncTestFunc()
+					}
+				}
+			}
+		}
+	}
 	controls.Groups = g
 	return controls.Summary
 }

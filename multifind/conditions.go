@@ -29,6 +29,15 @@ type NoGroupCondition struct {
 	sysGroups map[uint32]string
 }
 
+type FindQuery struct {
+	Conditions []FindCondition
+	Separator  byte
+}
+
+func NewFindQuery() *FindQuery {
+	return &FindQuery{Separator: '\n'}
+}
+
 func (cnd *PermCondition) Eval(de fs.DirEntry) bool {
 	fi, err := de.Info()
 	if err != nil {
@@ -119,8 +128,7 @@ func (cnd *NoGroupCondition) init() error {
 	return nil
 }
 
-func ExtractCondition(parms []string) ([]string, FindCondition, error) {
-	// fmt.Printf("::: parms %v\n", parms)
+func (fq *FindQuery) ExtractCondition(parms []string) ([]string, FindCondition, error) {
 	switch parms[0] {
 	case "-perm":
 		if len(parms) < 2 {
@@ -166,23 +174,28 @@ func ExtractCondition(parms []string) ([]string, FindCondition, error) {
 		cond := NoGroupCondition{}
 		cond.init()
 		return parms[1:], &cond, nil
+	case "-xdev", "": // xdev is implied
+		return parms[1:], nil, nil
+	case "-print0":
+		fq.Separator = 0
 	}
 
 	return nil, nil, fmt.Errorf("unknown find clause %s", parms[0])
 }
 
-func ParseCommandLine(cmdline []string) ([]FindCondition, error) {
-	conds := []FindCondition{}
+func (fq *FindQuery) ParseCommandLine(cmdline []string) error {
 	for {
-		p2, cond, err := ExtractCondition(cmdline)
+		p2, cond, err := fq.ExtractCondition(cmdline)
 		cmdline = p2 // won't work correctly if I set cmdline in previous line
 		if err != nil {
-			return nil, err
+			return err
 		}
-		conds = append(conds, cond)
+		if cond != nil {
+			fq.Conditions = append(fq.Conditions, cond)
+		}
 		if len(cmdline) == 0 {
 			break
 		}
 	}
-	return conds, nil
+	return nil
 }

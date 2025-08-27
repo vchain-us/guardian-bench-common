@@ -45,7 +45,8 @@ func TestScanner(t *testing.T) {
 	}
 	for i, c := range testvec {
 		cmd1 := strings.Split(c.cmd, " ")
-		pp, err := ParseCommandLine(cmd1)
+		fq := NewFindQuery()
+		err := fq.ParseCommandLine(cmd1)
 		CheckErr(t, err)
 		out := make(chan string, 10)
 		end := make(chan bool)
@@ -60,7 +61,7 @@ func TestScanner(t *testing.T) {
 			}
 			end <- true
 		}()
-		sc := NewScanner(pp, out)
+		sc := NewScanner(fq, out)
 		sc.Scan([]string{dir})
 		<-end
 		if len(res) != c.count {

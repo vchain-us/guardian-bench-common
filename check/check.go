@@ -373,7 +373,7 @@ func (cc *Check) runAuditCommands(bc BaseCheck, mscan *multifind.Multiscanner) (
 	if bc.Type == "asyncfind" && bc.auditer != nil && mscan != nil {
 		s, ok := bc.Audit.(string)
 		if ok && strings.HasPrefix(s, "find ") {
-			cc.addAsyncFind(bc, mscan)
+			cc.addAsyncFind(bc, mscan, bc.environ)
 			return "", "", "ASYNC"
 		}
 	}
@@ -412,23 +412,39 @@ func getFirstValidSubCheck(subChecks []*SubCheck, definedConstraints map[string]
 	return nil
 }
 
-func (cc *Check) addAsyncFind(bc BaseCheck, mscan *multifind.Multiscanner) error {
+func (cc *Check) addAsyncFind(bc BaseCheck, mscan *multifind.Multiscanner, env Environ) error {
 	command, _ := bc.Audit.(string)
-	parts := strings.SplitN(command, "|", 1)
-	cond, err := multifind.ParseCommandLine(strings.Split(parts[0], " "))
+	parts := strings.SplitN(command, "|", 2)
+	cmdline := strings.Split(parts[0], " ")
+	if cmdline[0] != "find" || cmdline[1] != "$CIS_MOUNTPOINTS" {
+		return fmt.Errorf("unknown asyncfind command")
+	}
+	fq := multifind.NewFindQuery()
+	err := fq.ParseCommandLine(cmdline[2:])
 	if err != nil {
 		return err
 	}
 	ch := make(chan string, 10)
-	mscan.AddScanner(cond, ch)
+	mscan.AddScanner(fq, ch)
 	go func() {
-		trackAsync(ch, cc)
+		trackAsync(ch, cc, fq.Separator)
+		out, err := cc.finalizeAsyncAudit(bc, parts[1:], env)
 		mscan.CloseWorker()
+		if err != nil {
+			logger, err2 := log.ZapLogger(nil, nil)
+			if err2 != nil {
+				panic(err2)
+			}
+			logger.Warn("ASYNC check fail", zap.String("ERROR", err.Error()))
+			defer logger.Sync() // nolint: errcheck
+		} else {
+			cc.asyncOutput = out
+		}
 	}()
 	return nil
 }
 
-func trackAsync(ch chan string, c *Check) {
+func trackAsync(ch chan string, c *Check, sep byte) {
 	output := make([]string, 0, 10)
 	for {
 		s := <-ch
@@ -437,9 +453,26 @@ func trackAsync(ch chan string, c *Check) {
 		}
 		output = append(output, s)
 	}
-	c.asyncOutput = strings.Join(output, "\000")
+	c.asyncOutput = strings.Join(output, string([]byte{sep}))
 }
 
+func (cc *Check) finalizeAsyncAudit(bc BaseCheck, cmdline []string, env Environ) (string, error) {
+	var out bytes.Buffer
+	execline := []string{"-c", strings.Join(cmdline, " ")}
+	shellPath := "/bin/sh"
+	cmd := exec.Command(shellPath, execline...)
+	cmd.Stdin = strings.NewReader(cc.asyncOutput)
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if env != nil {
+		for k, v := range *env {
+			cmd.Env = append(cmd.Environ(), fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+	err := cmd.Run()
+	output := out.String()
+	return output, err
+}
 func isSubCheckCompatible(testConstraintKey string, testConstraintVals []string, definedConstraints map[string][]string) bool {
 	definedConstraintsVals := definedConstraints[testConstraintKey]
 

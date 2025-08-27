@@ -46,9 +46,10 @@ func TestMultiScanner2(t *testing.T) {
 	for i, c := range testvec {
 		// wg.Add(1)
 		c.ch = make(chan string, 10)
-		cond, err := ParseCommandLine(strings.Split(c.cmd, " "))
+		fq := NewFindQuery()
+		err := fq.ParseCommandLine(strings.Split(c.cmd, " "))
 		CheckErr(t, err)
-		ms.AddScanner(cond, c.ch)
+		ms.AddScanner(fq, c.ch)
 		tres := []string{}
 		testvec[i].res = &tres
 		go func() {

@@ -9,7 +9,7 @@ import (
 )
 
 type Scanner struct {
-	cond   []FindCondition
+	query  *FindQuery
 	output chan string
 }
 
@@ -20,9 +20,9 @@ type Multiscanner struct {
 	mounts   map[string]string
 }
 
-func NewScanner(conditions []FindCondition, output chan string) *Scanner {
+func NewScanner(query *FindQuery, output chan string) *Scanner {
 	return &Scanner{
-		cond:   conditions,
+		query:  query,
 		output: output,
 	}
 }
@@ -31,7 +31,7 @@ func (sc *Scanner) Scan(paths []string) {
 	for _, pat := range paths {
 		filepath.WalkDir(pat, func(path string, d fs.DirEntry, err error) error {
 			ok := true
-			for _, p := range sc.cond {
+			for _, p := range sc.query.Conditions {
 				if !p.Eval(d) {
 					ok = false
 					break
@@ -64,7 +64,7 @@ func (ms *Multiscanner) Scan() {
 			}
 			for _, sc := range ms.scanners {
 				ok := true
-				for _, p := range sc.cond {
+				for _, p := range sc.query.Conditions {
 					if !p.Eval(d) {
 						ok = false
 						break
@@ -82,9 +82,9 @@ func (ms *Multiscanner) Scan() {
 	}
 }
 
-func (ms *Multiscanner) AddScanner(conditions []FindCondition, output chan string) {
+func (ms *Multiscanner) AddScanner(query *FindQuery, output chan string) {
 	scanner := &Scanner{
-		cond:   conditions,
+		query:  query,
 		output: output,
 	}
 	ms.scanners = append(ms.scanners, scanner)
