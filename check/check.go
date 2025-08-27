@@ -27,6 +27,7 @@ import (
 
 	"github.com/vchain-us/guardian-bench-common/auditeval"
 	"github.com/vchain-us/guardian-bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/multifind"
 	"go.uber.org/zap"
 )
 
@@ -98,6 +99,8 @@ type SubCheck struct {
 	BaseCheck `yaml:"check"`
 }
 
+type AsyncTest func()
+
 // Check contains information about a recommendation.
 type Check struct {
 	ID             string           `yaml:"id" json:"test_number"`
@@ -121,6 +124,8 @@ type Check struct {
 	customConfigs  []any
 	Reason         string `json:"reason,omitempty"`
 	environ        *map[string]string
+	asyncOutput    string
+	asyncTestFunc  AsyncTest
 }
 
 // Group is a collection of similar checks.
@@ -139,7 +144,7 @@ type Group struct {
 
 // Run executes the audit commands specified in a check and outputs
 // the results.
-func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]string) {
+func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]string, mscan *multifind.Multiscanner) {
 	logger, err := log.ZapLogger(nil, nil)
 	if err != nil {
 		panic(err)
@@ -196,7 +201,7 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 	var out, errmsgs string
 
 	t0 := time.Now()
-	out, errmsgs, c.State = runAuditCommands(*subCheck)
+	out, errmsgs, c.State = c.runAuditCommands(*subCheck, mscan)
 
 	if errmsgs != "" {
 		logger.Info("", zap.String("errmsgs", errmsgs))
@@ -208,8 +213,12 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 		}
 	}
 	finalOutput := c.evaluateTest(out, subCheck, logger)
-	/*
-	 */
+	if c.State == "ASYNC" {
+		c.asyncTestFunc = func() {
+			c.evaluateTest(c.asyncOutput, subCheck, logger)
+		}
+		return
+	}
 	testResult := false
 	if finalOutput != nil {
 		testResult = finalOutput.TestResult
@@ -357,18 +366,25 @@ func (a *Audit) run(env Environ) (output string, err error) {
 	return output, err
 }
 
-func runAuditCommands(c BaseCheck) (output, errMessage string, state State) {
-	if c.Type == "skip" {
+func (cc *Check) runAuditCommands(bc BaseCheck, mscan *multifind.Multiscanner) (output, errMessage string, state State) {
+	if bc.Type == "skip" {
 		return output, errMessage, INFO
 	}
-	if c.auditer != nil {
-		if len(c.customConfigs) == 0 {
-			c.customConfigs = append(c.customConfigs, c.Audit)
+	if bc.Type == "asyncfind" && bc.auditer != nil && mscan != nil {
+		s, ok := bc.Audit.(string)
+		if ok && strings.HasPrefix(s, "find ") {
+			cc.addAsyncFind(bc, mscan)
+			return "", "", "ASYNC"
 		}
-		output, errMessage, state = c.auditer.Execute(c.environ, c.customConfigs...)
+	}
+	if bc.auditer != nil {
+		if len(bc.customConfigs) == 0 {
+			bc.customConfigs = append(bc.customConfigs, bc.Audit)
+		}
+		output, errMessage, state = bc.auditer.Execute(bc.environ, bc.customConfigs...)
 	}
 	// If check type is manual, force result to WARN.
-	if c.Type == MANUAL {
+	if bc.Type == MANUAL {
 		return output, errMessage, WARN
 	}
 	return
@@ -394,6 +410,34 @@ func getFirstValidSubCheck(subChecks []*SubCheck, definedConstraints map[string]
 	}
 
 	return nil
+}
+
+func (cc *Check) addAsyncFind(bc BaseCheck, mscan *multifind.Multiscanner) error {
+	command, _ := bc.Audit.(string)
+	parts := strings.SplitN(command, "|", 1)
+	cond, err := multifind.ParseCommandLine(strings.Split(parts[0], " "))
+	if err != nil {
+		return err
+	}
+	ch := make(chan string, 10)
+	mscan.AddScanner(cond, ch)
+	go func() {
+		trackAsync(ch, cc)
+		mscan.CloseWorker()
+	}()
+	return nil
+}
+
+func trackAsync(ch chan string, c *Check) {
+	output := make([]string, 0, 10)
+	for {
+		s := <-ch
+		if s == "//" {
+			break
+		}
+		output = append(output, s)
+	}
+	c.asyncOutput = strings.Join(output, "\000")
 }
 
 func isSubCheckCompatible(testConstraintKey string, testConstraintVals []string, definedConstraints map[string][]string) bool {

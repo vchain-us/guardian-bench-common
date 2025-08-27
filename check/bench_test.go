@@ -70,7 +70,7 @@ type ipAuditMock struct {
 	URL string
 }
 
-func (a ipAuditMock) Execute(customConfig ...any) (result string, errMessage string, state State) {
+func (a ipAuditMock) Execute(e Environ, customConfig ...any) (result string, errMessage string, state State) {
 	//I don't really implement checking ip here, since the goal of this mock to test custom audit type
 	return "", "", PASS
 }
@@ -93,7 +93,10 @@ func TestNewControlsType(t *testing.T) {
 			false},
 	}
 	b := NewBench()
-	b.RegisterAuditType("check_ip", func() any { return &ipAuditMock{} })
+	err := b.RegisterAuditType("check_ip", func() any { return &ipAuditMock{} })
+	if err != nil {
+		t.Errorf("RegisterAuditType failed on check_ip")
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := b.NewControls(tt.args.in, tt.args.definitions)

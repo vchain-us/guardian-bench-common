@@ -70,7 +70,7 @@ func TestCheck_Run(t *testing.T) {
 
 	for i, testCase := range testCases {
 
-		testCase.check.Run(testDefinedConstraints, nil)
+		testCase.check.Run(testDefinedConstraints, nil, nil)
 
 		if testCase.check.State != testCase.Expected {
 			t.Errorf("test failed - number %d, expected %s, actual %s\n", i, testCase.Expected, testCase.check.State)
@@ -318,9 +318,9 @@ func TestRunAuditCommands(t *testing.T) {
 			o: "bench.go bench_test.go",
 		},
 	}
-
+	cc := Check{}
 	for i, c := range cases {
-		output, errmsg, state := runAuditCommands(c.b)
+		output, errmsg, state := cc.runAuditCommands(c.b, nil)
 		if state != c.s {
 			t.Errorf("Test %d: expected state %s, got %s", i, c.s, state)
 		}

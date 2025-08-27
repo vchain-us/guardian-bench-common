@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/vchain-us/guardian-bench-common/log"
+	"github.com/vchain-us/guardian-bench-common/multifind"
 	"go.uber.org/zap"
 
 	"github.com/onsi/ginkgo/reporters"
@@ -44,6 +45,7 @@ type Controls struct {
 	DefinedConstraints map[string][]string
 	Environ            map[string]string
 	customConfigs      []any
+	asyncfind          multifind.Multiscanner
 }
 
 // Summary is a summary of the results of control checks run.
@@ -72,6 +74,9 @@ func (controls *Controls) SetEnv(k, v string) {
 		controls.Environ = make(map[string]string)
 	}
 	controls.Environ[k] = v
+	if k == "CIS_MOUNTPOINTS" {
+		controls.asyncfind = *multifind.NewMultiScanner(v)
+	}
 }
 
 // RunGroup runs all checks in a group.
@@ -101,7 +106,52 @@ func (controls *Controls) RunGroup(gids ...string) Summary {
 					if group.Type == SKIP {
 						check.Type = SKIP
 					}
-					check.Run(controls.DefinedConstraints, &controls.Environ)
+					check.Run(controls.DefinedConstraints, &controls.Environ, &controls.asyncfind)
+					check.TestInfo = append(check.TestInfo, check.Remediation)
+					summarize(controls, check)
+					summarizeGroup(group, check)
+				}
+
+				g = append(g, group)
+			}
+		}
+
+	}
+
+	controls.Groups = g
+	return controls.Summary
+}
+
+// RunGroup runs all checks in a group.
+func (controls *Controls) FinalizeGroup(gids ...string) Summary {
+	g := []*Group{}
+	controls.Summary.Pass, controls.Summary.Fail, controls.Summary.Warn, controls.Summary.Info = 0, 0, 0, 0
+	// If no group id is passed run all group checks.
+	if len(gids) == 0 {
+		gids = controls.getAllGroupIDs()
+	}
+
+	for _, group := range controls.Groups {
+		for _, gid := range gids {
+			if gid == group.ID {
+				for _, check := range group.Checks {
+					// Check if group has constraints
+					if group.Constraints != nil {
+						groupConstraintsOk := true
+						for testConstraintKey, testConstraintVals := range group.Constraints {
+							groupConstraintsOk = isSubCheckCompatible(testConstraintKey, testConstraintVals, controls.DefinedConstraints)
+							// If group constraints is not applied then skip test.
+							if !groupConstraintsOk {
+								check.Type = SKIP
+							}
+						}
+					}
+					if group.Type == SKIP {
+						check.Type = SKIP
+					}
+					if check.State == "ASYNC" {
+						check.asyncTestFunc()
+					}
 					check.TestInfo = append(check.TestInfo, check.Remediation)
 					summarize(controls, check)
 					summarizeGroup(group, check)
@@ -132,7 +182,7 @@ func (controls *Controls) RunChecks(ids ...string) Summary {
 		for _, check := range group.Checks {
 			for _, id := range ids {
 				if id == check.ID {
-					check.Run(controls.DefinedConstraints, &controls.Environ)
+					check.Run(controls.DefinedConstraints, &controls.Environ, &controls.asyncfind)
 					check.TestInfo = append(check.TestInfo, check.Remediation)
 					summarize(controls, check)
 
