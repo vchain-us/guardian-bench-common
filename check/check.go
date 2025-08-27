@@ -428,7 +428,7 @@ func (cc *Check) addAsyncFind(bc BaseCheck, mscan *multifind.Multiscanner, env E
 	mscan.AddScanner(fq, ch)
 	go func() {
 		trackAsync(ch, cc, fq.Separator)
-		out, err := cc.finalizeAsyncAudit(bc, parts[1:], env)
+		out, err := cc.finalizeAsyncAudit(parts[1:], env)
 		mscan.CloseWorker()
 		if err != nil {
 			logger, err2 := log.ZapLogger(nil, nil)
@@ -456,7 +456,7 @@ func trackAsync(ch chan string, c *Check, sep byte) {
 	c.asyncOutput = strings.Join(output, string([]byte{sep}))
 }
 
-func (cc *Check) finalizeAsyncAudit(bc BaseCheck, cmdline []string, env Environ) (string, error) {
+func (cc *Check) finalizeAsyncAudit(cmdline []string, env Environ) (string, error) {
 	var out bytes.Buffer
 	execline := []string{"-c", strings.Join(cmdline, " ")}
 	shellPath := "/bin/sh"
