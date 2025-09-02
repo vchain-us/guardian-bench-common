@@ -123,7 +123,7 @@ func (controls *Controls) RunGroup(gids ...string) Summary {
 		for _, gid := range gids {
 			if gid == group.ID {
 				for _, check := range group.Checks {
-					if check.State == "ASYNC" {
+					if check.State == ASYNC {
 						check.asyncTestFunc()
 					}
 				}
@@ -161,7 +161,7 @@ func (controls *Controls) FinalizeGroup(gids ...string) Summary {
 					if group.Type == SKIP {
 						check.Type = SKIP
 					}
-					if check.State == "ASYNC" {
+					if check.State == ASYNC {
 						check.asyncTestFunc()
 					}
 					check.TestInfo = append(check.TestInfo, check.Remediation)

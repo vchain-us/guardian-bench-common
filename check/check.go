@@ -68,9 +68,14 @@ const (
 	// INFO informational message
 	INFO = "INFO"
 	// SKIP for when a check should be skipped.
-	SKIP = "skip"
-	// MANUAL for manual check type.
-	MANUAL = "manual"
+	SKIP  = "skip"
+	ASYNC = "ASYNC"
+)
+
+const (
+	MANUAL            = "manual"
+	ASYNC_FIND        = "asyncfind"
+	ASYNC_FIND_MANUAL = "asyncfind+manual"
 )
 
 func handleError(err error, context string) (errmsg string) {
@@ -212,13 +217,13 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 			logger.Warn("Error in audit command", zap.String("Reason", c.Reason))
 		}
 	}
-	finalOutput := c.evaluateTest(out, subCheck, logger)
-	if c.State == "ASYNC" {
+	if c.State == ASYNC {
 		c.asyncTestFunc = func() {
 			c.evaluateTest(c.asyncOutput, subCheck, logger)
 		}
 		return
 	}
+	finalOutput := c.evaluateTest(out, subCheck, logger)
 	testResult := false
 	if finalOutput != nil {
 		testResult = finalOutput.TestResult
@@ -228,7 +233,7 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 
 func (c *Check) evaluateTest(out string, subCheck *BaseCheck, logger *zap.Logger) *auditeval.TestOutput {
 	//If check type is manual, force result to WARN
-	if c.Type == MANUAL {
+	if c.Type == MANUAL || c.Type == ASYNC_FIND_MANUAL {
 		c.ActualValue = removeUnicodeCharsKeepNewline(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
@@ -236,7 +241,7 @@ func (c *Check) evaluateTest(out string, subCheck *BaseCheck, logger *zap.Logger
 		return nil
 	}
 
-	if c.State != "" {
+	if c.State != "" && c.State != ASYNC {
 		return nil
 	}
 
@@ -370,11 +375,11 @@ func (cc *Check) runAuditCommands(bc BaseCheck, mscan *multifind.Multiscanner) (
 	if bc.Type == "skip" {
 		return output, errMessage, INFO
 	}
-	if bc.Type == "asyncfind" && bc.auditer != nil && mscan != nil {
+	if (bc.Type == ASYNC_FIND || bc.Type == ASYNC_FIND_MANUAL) && bc.auditer != nil && mscan != nil {
 		s, ok := bc.Audit.(string)
 		if ok && strings.HasPrefix(s, "find ") {
 			cc.addAsyncFind(bc, mscan, bc.environ)
-			return "", "", "ASYNC"
+			return "", "", ASYNC
 		}
 	}
 	if bc.auditer != nil {
