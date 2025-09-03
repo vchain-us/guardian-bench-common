@@ -34,6 +34,16 @@ type FindQuery struct {
 	Separator  byte
 }
 
+type NestedCondition struct {
+	Conditions []FindCondition
+}
+
+type OrOperator struct {
+}
+
+type NotOperator struct {
+}
+
 func NewFindQuery() *FindQuery {
 	return &FindQuery{Separator: '\n'}
 }
@@ -128,6 +138,42 @@ func (cnd *NoGroupCondition) init() error {
 	return nil
 }
 
+func (cnd *OrOperator) Eval(_de fs.DirEntry) bool {
+	return true
+}
+
+func (cnd *NotOperator) Eval(_de fs.DirEntry) bool {
+	return true
+}
+
+func (cnd *NestedCondition) Eval(de fs.DirEntry) bool {
+	res := true
+	operator := '&'
+	for _, c := range cnd.Conditions {
+		if _, ok := c.(*OrOperator); ok {
+			operator = '|'
+			continue
+		}
+		if _, ok := c.(*NotOperator); ok {
+			operator = '!'
+			continue
+		}
+		if c == nil {
+			panic("NULL reference condition")
+		}
+		switch operator {
+		case '&':
+			res = res && c.Eval(de)
+		case '|':
+			res = res || c.Eval(de)
+		case '!':
+			res = res && !c.Eval(de)
+		}
+		operator = '&'
+	}
+	return res
+}
+
 func (fq *FindQuery) ExtractCondition(parms []string) ([]string, FindCondition, error) {
 	switch parms[0] {
 	case "-perm":
@@ -174,10 +220,35 @@ func (fq *FindQuery) ExtractCondition(parms []string) ([]string, FindCondition, 
 		cond := NoGroupCondition{}
 		cond.init()
 		return parms[1:], &cond, nil
-	case "-xdev", "": // xdev is implied
+	case "-xdev", "", "-a": // xdev is implied
 		return parms[1:], nil, nil
 	case "-print0":
 		fq.Separator = 0
+	case "-o":
+		return parms[1:], &OrOperator{}, nil
+	case "!":
+		return parms[1:], &NotOperator{}, nil
+	case "\\(":
+		nestedConditions := make([]FindCondition, 0)
+		parms = parms[1:]
+		for {
+			if len(parms) == 0 {
+				return nil, nil, fmt.Errorf("missing closed parenthesis")
+			}
+			if parms[0] == "\\)" {
+				return parms[1:], &NestedCondition{nestedConditions}, nil
+			}
+			p2, cond, err := fq.ExtractCondition(parms)
+			parms = p2
+			if err != nil {
+				return nil, nil, err
+			}
+			if cond != nil {
+				nestedConditions = append(nestedConditions, cond)
+			}
+		}
+	case "\\)":
+		return parms[1:], nil, nil
 	}
 
 	return nil, nil, fmt.Errorf("unknown find clause %s", parms[0])

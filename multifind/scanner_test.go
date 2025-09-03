@@ -1,6 +1,7 @@
 package multifind
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -42,6 +43,8 @@ func TestScanner(t *testing.T) {
 		{"-name a*", 2},
 		{"-type f", 3},
 		{"-perm -600", 4},
+		{"-type f \\( -name a* -o -name c* \\)", 3},
+		{"-type f \\( -name aaa -o -name ccc \\)", 2},
 	}
 	for i, c := range testvec {
 		cmd1 := strings.Split(c.cmd, " ")
@@ -67,5 +70,24 @@ func TestScanner(t *testing.T) {
 		if len(res) != c.count {
 			t.Fatalf("Fail test %d: wrong number of files %v", i, res)
 		}
+	}
+}
+
+func TestNestedCo(t *testing.T) {
+	cmd := strings.Split(`-perm -600 \( -nogroup -type d -name *.txt \)`, " ")
+	fq := NewFindQuery()
+	err := fq.ParseCommandLine(cmd)
+	CheckErr(t, err)
+	fmt.Printf("NEST0: %+v\n", fq.Conditions)
+	if len(fq.Conditions) != 2 {
+		t.Fatalf("Wrong condition length: %d", len(fq.Conditions))
+	}
+	nest, ok := fq.Conditions[1].(*NestedCondition)
+	if !ok {
+		t.Fatal("No nested condition")
+	}
+	fmt.Printf("NEST1: %+v\n", nest.Conditions)
+	if len(nest.Conditions) != 3 {
+		t.Fatalf("Wrong condition length: %d", len(nest.Conditions))
 	}
 }

@@ -30,14 +30,28 @@ func NewScanner(query *FindQuery, output chan string) *Scanner {
 func (sc *Scanner) Scan(paths []string) {
 	for _, pat := range paths {
 		filepath.WalkDir(pat, func(path string, d fs.DirEntry, err error) error {
-			ok := true
+			res := true
+			operator := '&'
 			for _, p := range sc.query.Conditions {
-				if !p.Eval(d) {
-					ok = false
-					break
+				if _, ok := p.(*OrOperator); ok {
+					operator = '|'
+					continue
 				}
+				if _, ok := p.(*NotOperator); ok {
+					operator = '!'
+					continue
+				}
+				switch operator {
+				case '&':
+					res = res && p.Eval(d)
+				case '|':
+					res = res || p.Eval(d)
+				case '!':
+					res = res && !p.Eval(d)
+				}
+				operator = '&'
 			}
-			if ok {
+			if res {
 				sc.output <- path
 			}
 			return nil
@@ -63,14 +77,28 @@ func (ms *Multiscanner) Scan() {
 				}
 			}
 			for _, sc := range ms.scanners {
-				ok := true
+				operator := '&'
+				res := true
 				for _, p := range sc.query.Conditions {
-					if !p.Eval(d) {
-						ok = false
-						break
+					if _, ok := p.(*OrOperator); ok {
+						operator = '|'
+						continue
 					}
+					if _, ok := p.(*NotOperator); ok {
+						operator = '!'
+						continue
+					}
+					switch operator {
+					case '&':
+						res = res && p.Eval(d)
+					case '|':
+						res = res || p.Eval(d)
+					case '!':
+						res = res && !p.Eval(d)
+					}
+					operator = '&'
 				}
-				if ok {
+				if res {
 					sc.output <- path
 				}
 			}

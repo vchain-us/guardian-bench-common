@@ -234,6 +234,7 @@ func (c *Check) Run(definedConstraints map[string][]string, environ *map[string]
 func (c *Check) evaluateTest(out string, subCheck *BaseCheck, logger *zap.Logger) *auditeval.TestOutput {
 	//If check type is manual, force result to WARN
 	if c.Type == MANUAL || c.Type == ASYNC_FIND_MANUAL {
+		c.Type = MANUAL
 		c.ActualValue = removeUnicodeCharsKeepNewline(out)
 		c.Reason = "Test marked as a manual test"
 		c.State = WARN
