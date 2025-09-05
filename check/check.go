@@ -463,6 +463,9 @@ func trackAsync(ch chan string, c *Check, sep byte) {
 }
 
 func (cc *Check) finalizeAsyncAudit(cmdline []string, env Environ) (string, error) {
+	if len(cmdline) == 0 {
+		return cc.asyncOutput, nil
+	}
 	var out bytes.Buffer
 	execline := []string{"-c", strings.Join(cmdline, " ")}
 	shellPath := "/bin/sh"
